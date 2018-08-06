@@ -1,0 +1,75 @@
+{
+  "server": {
+    "hostname": "0.0.0.0",
+    "port": 3000
+  },
+  "mongodb": {
+    "host":"localhost",
+    "port":"27017",
+    "database":"gofr",
+    "user":"",
+    "password":""
+  },
+  "mCSD":{
+    "url":"http://localhost:3447",
+    "username": "",
+    "password": "",
+    "database": "GeoAlign",
+    "databaseUser": "",
+    "databasePassword": "",
+    "databaseHost": "localhost",
+    "databasePort": "27017"
+  },
+  "CSD":{
+    "url":"http://localhost:8984/CSD",
+    "username":"",
+    "password":""
+  },
+  "dbArchives":{
+    "maxArchives":2
+  },
+  "UUID":{
+    "namespace":"de2026e0-62ad-11e8-98ab-fb2f18c02"
+  },
+  "oauth": {
+    "accessTokenLifetime": 3600,
+    "debug":true
+  },
+  "logger": {
+    "level": "info"
+  },
+  "levels": [
+    "level1",
+    "level2",
+    "level3",
+    "level4",
+    "level5",
+    "level6",
+    "level7"
+  ],
+  "mapping": {
+    "maxSuggestions":5,
+    "dbPrefix": "MOHDATIM",
+    "flagCode": "dfcc3da2-7ab4-11e8-adc0-fa7ae01bbebc",
+    "noMatchCode": "cc1f0726-7ab4-11e8-adc0-fa7ae01bbebc",
+    "matchBrokenCode": "475e7eb2-88fc-11e8-9a94-a6cf71072f73",
+    "recoStatusCode": "e179be2f-0dad-4abb-886e-da86f21add6f"
+  },
+  "matchResults": {
+    "maxSuggestions":5
+  },
+  "dictionary": {
+    "HC": "Health Center",
+    "HOSP": "Hospital",
+    "H/C": "Health Center",
+    "St": "Saint",
+    "ST.": "Saint",
+    "Health Centre": "Health Center",
+    "HP": "Health Post",
+    "HP.": "Health Post",
+    "DISP": "Dispensary",
+    "DISP.": "Dispensary",
+    "Cl": "Clinic",
+    "CL.": "Clinic"
+  }
+}

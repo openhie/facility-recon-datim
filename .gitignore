@@ -1,0 +1,4 @@
+dhis2sync/node_modules
+facility-recon-backend/node_modules
+facility-recon-backend/dbArchives/**
+facility-recon-gui/node_modules
