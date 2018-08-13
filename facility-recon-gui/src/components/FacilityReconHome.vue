@@ -13,7 +13,9 @@
   </v-container>
 </template>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
+<script>
+
+</script>
 <style scoped>
 h1, h2 {
   font-weight: normal;

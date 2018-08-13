@@ -3,11 +3,14 @@
     <v-toolbar color="primary" dark app>
       <v-toolbar-title v-text="title"></v-toolbar-title>
       <v-toolbar-items>
-        <v-btn to="/" flat>
-          <v-icon>home</v-icon>Home
+        <v-btn flat :href="dhisLink" v-if='dhisLink'>
+          <img src="./assets/dhis2.png"/>
         </v-btn>
         <v-btn to="upload" flat v-if='!$store.state.denyAccess'>
           <v-icon>cloud_upload</v-icon>Upload
+        </v-btn>
+        <v-btn flat to="dbAdmin" v-if='!$store.state.denyAccess'>
+          <v-icon>archive</v-icon> Archived Uploads
         </v-btn>
         <v-btn to="view" flat v-if='!$store.state.denyAccess'>
           <v-icon>list</v-icon>View
@@ -71,6 +74,15 @@ export default {
       title: 'Facility Reconciliation'
     }
   },
+  computed: {
+    dhisLink () {
+      if (isProduction) {
+        return window.location.protocol + '//' + window.location.hostname
+      } else {
+        return false
+      }
+    }
+  },
   methods: {
     getOrgHierarchy () {
       var orgUnit = this.$store.state.orgUnit
@@ -80,6 +92,20 @@ export default {
 
       axios.get(backendServer + '/hierarchy/moh/', { params: orgUnit }).then((hierarchy) => {
         this.$store.state.mohHierarchy = hierarchy
+      })
+    },
+    renderInitialPage () {
+      var OrgId = this.$store.state.orgUnit.OrgId
+      axios.get(backendServer + '/uploadAvailable/' + OrgId).then((results) => {
+        this.getTotalLevels()
+        if (results.data.dataUploaded) {
+          this.$router.push({name: 'FacilityReconScores'})
+        } else {
+          this.$router.push({name: 'FacilityReconUpload'})
+        }
+      }).catch((err) => {
+        console.log(err)
+        this.$router.push({name: 'FacilityReconScores'})
       })
     },
     getTotalLevels () {
@@ -114,8 +140,8 @@ export default {
               this.$store.state.denyAccess = true
               this.initializingApp = false
             } else {
+              this.renderInitialPage()
               this.$store.state.denyAccess = false
-              this.getTotalLevels()
             }
           })
         }
@@ -128,7 +154,7 @@ export default {
     if (isProduction) {
       this.getOrganisationUnit()
     } else {
-      this.getTotalLevels()
+      this.renderInitialPage()
       this.$store.state.denyAccess = false
     }
     this.$root.$on('reloadTree', () => {

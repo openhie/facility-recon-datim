@@ -96,7 +96,6 @@ module.exports = function () {
         this.matchStatus(mcsdMapped, mohIdentifier, (match) => {
           // if this MOH Org is already mapped
           if (match) {
-            winston.error('matched')
             const noMatchCode = config.getConf('mapping:noMatchCode');
             var entityParent = null;
             if (mohEntry.resource.hasOwnProperty('partOf')) {
@@ -124,7 +123,6 @@ module.exports = function () {
                 let percent = parseFloat((count*100/totalRecords).toFixed(2))
                 scoreResData = JSON.stringify({status: '3/3 - Running Automatching', error: null, percent: percent})
                 redisClient.set(scoreRequestId,scoreResData)
-                winston.error(`${count}/${mcsdMOH.entry.length}`);
                 return mohCallback();
               }
               // if no macth then this is already marked as a match
@@ -136,11 +134,11 @@ module.exports = function () {
                   thisRanking.moh.tag = 'flagged';
                 }
               }
-              if (match.resource.hasOwnProperty('partOf')) {
-                entityParent = match.resource.partOf.reference;
-              }
+              var matchInDatim = mcsdDATIM.entry.find((entry)=>{
+                return entry.resource.id == match.resource.id
+              })
               thisRanking.exactMatch = {
-                name: match.resource.name,
+                name: matchInDatim.resource.name,
                 parents: datimParentNames[match.resource.id],
                 id: match.resource.id,
               };
@@ -149,7 +147,6 @@ module.exports = function () {
               let percent = parseFloat((count*100/totalRecords).toFixed(2))
               scoreResData = JSON.stringify({status: '3/3 - Running Automatching', error: null, percent: percent})
               redisClient.set(scoreRequestId,scoreResData)
-              winston.error(`${count}/${mcsdMOH.entry.length}`);
               return mohCallback();
             });
           } else { // if not mapped
@@ -191,8 +188,6 @@ module.exports = function () {
               thisRanking.exactMatch = {};
               const datimPromises = [];
               var datimFiltered = mcsdDATIM.entry.filter((entry)=>{
-                //return mohParentIds[0] == datimMappedParentIds[entry.resource.id][0]
-                // in case there are different levels of parents (only DATIM can have more levels due to import)
                 return datimMappedParentIds[entry.resource.id].includes(mohParentIds[0])
               })
               async.each(datimFiltered, (datimEntry, datimCallback) => {
@@ -431,12 +426,12 @@ module.exports = function () {
                 }
               }
 
-              if (match.resource.hasOwnProperty('partOf')) {
-                entityParent = match.resource.partOf.reference;
-              }
+              var matchInDatim = mcsdDATIM.entry.find((entry) => {
+                return entry.resource.id == match.resource.id
+              })
 
               thisRanking.exactMatch = {
-                name: match.resource.name,
+                name: matchInDatim.resource.name,
                 parents: datimParentNames[match.resource.id],
                 id: match.resource.id,
               };
@@ -637,7 +632,6 @@ module.exports = function () {
               }, () => {
                 scoreResults.push(thisRanking);
                 count++;
-                winston.info(`${count}/${mcsdMOH.entry.length}`);
                 let percent = parseFloat((count*100/totalRecords).toFixed(2))
                 scoreResData = JSON.stringify({status: '3/3 - Running Automatching', error: null, percent: percent})
                 redisClient.set(scoreRequestId,scoreResData)

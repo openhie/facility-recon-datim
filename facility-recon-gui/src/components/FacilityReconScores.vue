@@ -1,5 +1,13 @@
 <template>
   <v-container fluid>
+    <v-dialog v-model="dynamicProgress" hide-overlay persistent width="300">
+      <v-card color="primary" dark>
+        <v-card-text>
+          {{progressTitle}}
+          <v-progress-linear indeterminate color="white" class="mb-0"></v-progress-linear>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
     <template v-if='$store.state.uploadRunning'><br><br><br>
       <v-alert type="info" :value="true">
         <b>Wait for upload to finish ...</b>
@@ -129,10 +137,6 @@
           <v-btn slot="activator" color="primary" dark @click="getScores" round>
             <v-icon>repeat_one</v-icon> Recalculate Scores</v-btn>
         </v-flex>
-        <v-flex xs1 sm4 md2 v-if="nextLevel == 'yes'">
-          <v-btn color="success" round @click='levelChanged(++$store.state.recoLevel)'>
-            <v-icon>forward</v-icon>Proceed to Level {{$store.state.recoLevel}}</v-btn>
-        </v-flex>
       </v-layout>
       <v-layout row wrap>
         <v-flex xs2 right>
@@ -144,6 +148,11 @@
                   <v-icon light>thumb_up</v-icon>
                   <b>Matched</b>
                 </v-flex>
+                <v-flex align-center>
+                  <center>
+                    <b>{{mohTotalMatched}}/{{mohTotalRecords}}</b>
+                  </center>
+                </v-flex>
                 <v-flex>
                   <center>
                     <v-progress-circular :rotate="-90" :size="65" :width="8" :value="mohPercentMatched" color="yellow">
@@ -151,11 +160,6 @@
                         <b>{{ mohPercentMatched }}%</b>
                       </font>
                     </v-progress-circular>
-                  </center>
-                </v-flex>
-                <v-flex align-center>
-                  <center>
-                    <b>{{mohTotalMatched}}/{{mohTotalRecords}}</b>
                   </center>
                 </v-flex>
               </v-layout>
@@ -460,6 +464,16 @@
           </v-tab-item>
         </v-tabs>
       </v-layout>
+      <v-layout>
+        <v-flex xs1 sm4 md2 v-if="nextLevel == 'yes'">
+          <v-btn color="primary" round @click='levelChanged(++$store.state.recoLevel)'>
+            <v-icon>forward</v-icon>Proceed to Level {{$store.state.recoLevel}}</v-btn>
+        </v-flex>
+        <v-flex xs1 sm4 md2 v-if="lastLevelDone == 'yes'">
+          <v-btn color="primary" round @click='$router.push({name:"FacilityRecoStatus"})'>
+            <v-icon>bar_chart</v-icon>Reconciliation Status</v-btn>
+        </v-flex>
+      </v-layout>
     </v-container>
   </v-container>
 </template>
@@ -477,6 +491,8 @@ export default {
   mixins: [scoresMixin],
   data () {
     return {
+      dynamicProgress: false,
+      progressTitle: '',
       sort_arrow: 'up',
       pagination: { sortBy: 'score' },
       recoLevel: 0,
@@ -615,61 +631,72 @@ export default {
         this.alertText = 'Select DATIM Location to match against MOH Location'
         return
       }
+      this.progressTitle = 'Saving match'
+      this.dynamicProgress = true
       let formData = new FormData()
       formData.append('mohId', this.selectedMohId)
       formData.append('datimId', this.selectedDatimId)
       formData.append('recoLevel', this.$store.state.recoLevel)
       formData.append('totalLevels', this.$store.state.totalLevels)
       var orgid = this.$store.state.orgUnit.OrgId
-      // remove from DATIM Unmatched
-      let datimParents = null
-      for (let k in this.$store.state.datimUnMatched) {
-        if (this.$store.state.datimUnMatched[k].id === this.selectedDatimId) {
-          datimParents = this.$store.state.datimUnMatched[k].parents
-          this.$store.state.datimUnMatched.splice(k, 1)
-        }
-      }
-
-      // Add from a list of MOH Matched and remove from list of MOH unMatched
-      for (let k in this.$store.state.mohUnMatched) {
-        if (this.$store.state.mohUnMatched[k].id === this.selectedMohId) {
-          if (type === 'match') {
-            ++this.$store.state.totalAllMapped
-            this.$store.state.matchedContent.push({
-              mohName: this.selectedMohName,
-              mohId: this.selectedMohId,
-              mohParents: this.$store.state.mohUnMatched[k].parents,
-              datimName: this.selectedDatimName,
-              datimId: this.selectedDatimId,
-              datimParents: datimParents
-            })
-          } else if (type === 'flag') {
-            ++this.$store.state.totalAllFlagged
-            this.$store.state.flagged.push({
-              mohName: this.selectedMohName,
-              mohId: this.selectedMohId,
-              mohParents: this.$store.state.mohUnMatched[k].parents,
-              datimName: this.selectedDatimName,
-              datimId: this.selectedDatimId,
-              datimParents: datimParents
-            })
-          }
-          this.$store.state.mohUnMatched.splice(k, 1)
-        }
-      }
-      this.selectedMohId = null
-      this.selectedMohName = null
-      this.selectedDatimId = null
-      this.dialog = false
       axios
         .post(backendServer + '/match/' + type + '/' + orgid, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         })
-        .then(() => { })
+        .then(() => {
+          this.dynamicProgress = false
+          // remove from DATIM Unmatched
+          let datimParents = null
+          for (let k in this.$store.state.datimUnMatched) {
+            if (this.$store.state.datimUnMatched[k].id === this.selectedDatimId) {
+              datimParents = this.$store.state.datimUnMatched[k].parents
+              this.$store.state.datimUnMatched.splice(k, 1)
+            }
+          }
+
+          // Add from a list of MOH Matched and remove from list of MOH unMatched
+          for (let k in this.$store.state.mohUnMatched) {
+            if (this.$store.state.mohUnMatched[k].id === this.selectedMohId) {
+              if (type === 'match') {
+                ++this.$store.state.totalAllMapped
+                this.$store.state.matchedContent.push({
+                  mohName: this.selectedMohName,
+                  mohId: this.selectedMohId,
+                  mohParents: this.$store.state.mohUnMatched[k].parents,
+                  datimName: this.selectedDatimName,
+                  datimId: this.selectedDatimId,
+                  datimParents: datimParents
+                })
+              } else if (type === 'flag') {
+                ++this.$store.state.totalAllFlagged
+                this.$store.state.flagged.push({
+                  mohName: this.selectedMohName,
+                  mohId: this.selectedMohId,
+                  mohParents: this.$store.state.mohUnMatched[k].parents,
+                  datimName: this.selectedDatimName,
+                  datimId: this.selectedDatimId,
+                  datimParents: datimParents
+                })
+              }
+              this.$store.state.mohUnMatched.splice(k, 1)
+            }
+          }
+          this.selectedMohId = null
+          this.selectedMohName = null
+          this.selectedDatimId = null
+          this.dialog = false
+        })
         .catch(err => {
-          console.log(err)
+          this.dynamicProgress = false
+          this.alert = true
+          this.alertTitle = 'Error'
+          this.alertText = err.response.data.error
+          this.selectedMohId = null
+          this.selectedMohName = null
+          this.selectedDatimId = null
+          this.dialog = false
         })
     },
     acceptFlag (datimId) {
@@ -813,36 +840,48 @@ export default {
         this.alertText = 'Dont select any location if you want to mark as no match'
         return
       }
+      this.progressTitle = 'Saving as no match'
+      this.dynamicProgress = true
       let formData = new FormData()
       formData.append('mohId', this.selectedMohId)
       formData.append('recoLevel', this.$store.state.recoLevel)
       formData.append('totalLevels', this.$store.state.totalLevels)
       let orgid = this.$store.state.orgUnit.OrgId
 
-      // remove from MOH Unmatched
-      for (let k in this.$store.state.mohUnMatched) {
-        if (this.$store.state.mohUnMatched[k].id === this.selectedMohId) {
-          this.$store.state.noMatchContent.push({
-            mohName: this.selectedMohName,
-            mohId: this.selectedMohId,
-            parents: this.$store.state.mohUnMatched[k].parents
-          })
-          this.$store.state.mohUnMatched.splice(k, 1)
-        }
-      }
-      this.dialog = false
-      this.selectedMohId = null
-      this.selectedMohName = null
-      this.selectedDatimId = null
       axios
         .post(backendServer + '/noMatch/' + orgid, formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         })
-        .then(() => { })
+        .then(() => {
+          this.dynamicProgress = false
+          // remove from MOH Unmatched
+          for (let k in this.$store.state.mohUnMatched) {
+            if (this.$store.state.mohUnMatched[k].id === this.selectedMohId) {
+              this.$store.state.noMatchContent.push({
+                mohName: this.selectedMohName,
+                mohId: this.selectedMohId,
+                parents: this.$store.state.mohUnMatched[k].parents
+              })
+              ++this.$store.state.totalAllNoMatch
+              this.$store.state.mohUnMatched.splice(k, 1)
+            }
+          }
+          this.dialog = false
+          this.selectedMohId = null
+          this.selectedMohName = null
+          this.selectedDatimId = null
+        })
         .catch(err => {
-          console.log(err)
+          this.dynamicProgress = false
+          this.alert = true
+          this.alertTitle = 'Error'
+          this.alertText = err.response.data.error
+          this.dialog = false
+          this.selectedMohId = null
+          this.selectedMohName = null
+          this.selectedDatimId = null
         })
     },
     back () {
@@ -946,6 +985,19 @@ export default {
     nextLevel () {
       if (
         this.$store.state.recoLevel < this.$store.state.totalLevels &&
+        this.$store.state.mohUnMatched !== null &&
+        this.$store.state.mohUnMatched.length === 0 &&
+        this.$store.state.flagged !== null &&
+        this.$store.state.flagged.length === 0
+      ) {
+        return 'yes'
+      } else {
+        return 'no'
+      }
+    },
+    lastLevelDone () {
+      if (
+        this.$store.state.recoLevel === this.$store.state.totalLevels &&
         this.$store.state.mohUnMatched !== null &&
         this.$store.state.mohUnMatched.length === 0 &&
         this.$store.state.flagged !== null &&
@@ -1105,6 +1157,9 @@ export default {
       }
     },
     datimPercentNotInMoh () {
+      if (this.datimNotInMoh === 0) {
+        return 0
+      }
       var percent = parseFloat(
         (this.datimNotInMoh * 100 / this.datimTotalRecords).toFixed(2)
       )
